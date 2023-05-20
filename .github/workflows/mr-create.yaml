@@ -1,0 +1,70 @@
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+
+name: Deploy dev environment
+
+jobs:
+  build-image:
+    name: Build dev image
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ vars.APP_IMAGE }}:mr${{github.event.pull_request.number}}
+          ssh: default
+
+  deploy-dev:
+    name: Deploy DEV
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: [build-image]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - run: pip install jinja2
+      - run: python main.py base_deployment_mr.yaml > parsed_manifest.yaml
+      - run: cat parsed_manifest.yaml
+      - name: Destroy old deployment
+        uses: Consensys/kubernetes-action@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        with:
+          args: delete -f parsed_manifest.yaml --ignore-not-found
+      - name: Create new deployment
+        uses: Consensys/kubernetes-action@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        with:
+          args: apply -f parsed_manifest.yaml
+    env:
+      ENV_REDIS_URL: ${{ secrets.ENV_REDIS_URL }}
+      ENV_RUST_LOG: ${{ secrets.ENV_RUST_LOG }}
+      APP_PR: ${{github.event.pull_request.number}}
+      APP_NAMESPACE: ${{ vars.APP_NAMESPACE }}
+      APP_IMAGE: ${{ vars.APP_IMAGE }}
+      APP_NAME: ${{ vars.APP_NAME}}
+      APP_INGRESS_PATH: ${{ vars.APP_INGRESS_PATH}}

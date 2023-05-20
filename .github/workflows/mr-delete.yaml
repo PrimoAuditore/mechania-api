@@ -1,0 +1,35 @@
+on:
+  pull_request:
+    types: [closed]
+
+name: Delete dev environment
+
+jobs:
+  delete-dev-environment:
+    name: Delete DEV environment
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      - run: pip install jinja2
+      - run: python main.py base_deployment_mr.yaml > parsed_manifest.yaml
+      - run: cat parsed_manifest.yaml
+      - name: Destroy old deployment
+        uses: Consensys/kubernetes-action@master
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        with:
+          args: delete -f parsed_manifest.yaml
+    env:
+      ENV_REDIS_URL: ${{ secrets.ENV_REDIS_URL }}
+      ENV_RUST_LOG: ${{ secrets.ENV_RUST_LOG }}
+      ENV_META_TOKEN: ${{ secrets.ENV_META_TOKEN }}
+      APP_PR: ${{github.event.pull_request.number}}
+      APP_NAMESPACE: ${{ vars.APP_NAMESPACE }}
+      APP_IMAGE: ${{ vars.APP_IMAGE }}
+      APP_NAME: ${{ vars.APP_NAME}}
+      APP_INGRESS_PATH: ${{ vars.APP_INGRESS_PATH}}
