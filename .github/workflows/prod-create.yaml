@@ -31,6 +31,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ vars.APP_IMAGE }}:${{ github.ref_name }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   deploy-dev:
     name: Deploy PROD
@@ -59,8 +61,7 @@ jobs:
         with:
           args: apply -f parsed_manifest.yaml
     env:
-      ENV_REDIS_URL: ${{ secrets.ENV_REDIS_URL }}
-      ENV_RUST_LOG: ${{ secrets.ENV_RUST_LOG }}
+      ENV_DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APP_TAG: ${{ github.ref_name }}
       APP_NAMESPACE: ${{ vars.APP_NAMESPACE }}
       APP_IMAGE: ${{ vars.APP_IMAGE }}
