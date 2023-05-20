@@ -1,4 +1,5 @@
-FROM rust:slim as build
+FROM alexmiron/ubuntu-cdev:22.04_1.1 as build
+
 
 ENV META_TOKEN=""
 ENV REDIS_URL=""
