@@ -34,27 +34,6 @@ async fn main() {
                 .allow_headers([http::header::CONTENT_TYPE])
                 .allow_methods([Method::GET, Method::POST]),
         )
-        //.route("/plan/calculate", post(calculate_plan_handler))
-        //.layer(
-        //    CorsLayer::new()
-        //        .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
-        //        .allow_headers([http::header::CONTENT_TYPE])
-        //        .allow_methods([Method::GET, Method::POST]),
-        //)
-        //.route("/plan/:plan_quote_id/create", post(create_plan))
-        //.layer(
-        //    CorsLayer::new()
-        //        .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
-        //        .allow_headers([http::header::CONTENT_TYPE])
-        //        .allow_methods([Method::POST]),
-        //)
-        //.route("/plan/:plan_quote_id", get(get_plan))
-        //.layer(
-        //    CorsLayer::new()
-        //        .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
-        //        .allow_headers([http::header::CONTENT_TYPE])
-        //        .allow_methods([Method::GET, Method::POST]),
-        //)
         .route("/test", get(test_create))
         .layer(
             CorsLayer::new()
