@@ -3,7 +3,7 @@ FROM rust:slim as build
 ENV META_TOKEN=""
 ENV REDIS_URL=""
 
-RUN apt update && apt install -y libssl-dev
+RUN apt update && apt install -y libssl-dev pkg-config
 
 WORKDIR /app
 COPY . .
