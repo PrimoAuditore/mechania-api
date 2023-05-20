@@ -31,7 +31,6 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ vars.APP_IMAGE }}:${{ github.ref_name }}
-          ssh: default
 
   deploy-dev:
     name: Deploy PROD
