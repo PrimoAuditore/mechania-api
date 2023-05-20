@@ -10,6 +10,8 @@ jobs:
     name: Build dev image
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -29,8 +31,6 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ vars.APP_IMAGE }}:mr${{github.event.pull_request.number}}
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 
   deploy-dev:
