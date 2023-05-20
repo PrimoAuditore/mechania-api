@@ -1,7 +1,7 @@
 FROM rust:slim as build
 
-ENV META_TOKEN=""
-ENV REDIS_URL=""
+ARG DATABASE_URL
+RUN echo ${DATABASE_URL}
 
 RUN apt update && apt install -y libssl-dev pkg-config
 
