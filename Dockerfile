@@ -1,8 +1,9 @@
-FROM alexmiron/ubuntu-cdev:22.04_1.1 as build
-
+FROM rust:slim as build
 
 ENV META_TOKEN=""
 ENV REDIS_URL=""
+
+RUN apt update && apt install -y libssl-dev
 
 WORKDIR /app
 COPY . .
