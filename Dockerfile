@@ -5,6 +5,11 @@ RUN echo ${DATABASE_URL}
 
 RUN apt update && apt install -y libssl-dev pkg-config
 
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release
+
+
 WORKDIR /app
 COPY . .
 RUN cargo build --release

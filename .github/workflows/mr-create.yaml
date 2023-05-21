@@ -30,6 +30,8 @@ jobs:
         with:
           build-args: DATABASE_URL=${{ secrets.DATABASE_URL }}
           context: .
+          cache-from: type=registry,ref=${{ vars.APP_IMAGE }}:mr${{github.event.pull_request.number}}
+          cache-to: type=inline
           file: ./Dockerfile
           push: true
           tags: ${{ vars.APP_IMAGE }}:mr${{github.event.pull_request.number}}
