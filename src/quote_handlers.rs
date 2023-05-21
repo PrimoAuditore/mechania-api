@@ -25,11 +25,11 @@ pub async fn create_quote(create_params: Json<CreateQuoteBody>) -> impl IntoResp
     let vehicle = check_vehicle_exists(create_params.license_plate.clone()).await;
 
     if vehicle.is_none() {
-
         return (
             StatusCode::BAD_REQUEST,
             Json("Vehicle with specified license plate doesnt exist"),
-        ).into_response();
+        )
+            .into_response();
     }
     let vehicle = vehicle.unwrap();
 
@@ -97,17 +97,19 @@ pub async fn create_new_quote(
 ) -> Result<(), Box<dyn Error>> {
     let mut conn = establish_connection().await;
     let timestamp = Utc::now().to_rfc3339();
-    print!("timestamp: {timestamp}");
+    let datetime: Vec<&str> = timestamp.split(".").collect();
+    println!("{}", datetime.get(0).unwrap());
+
 
     let res = sqlx::query!(
         r#"insert into Quote(id,license_plate, monthly_price, client_email, fuel_consumption, creation_timestamp, client_name, labour_coverage)
-        values (?,?,?,?,?,STR_TO_DATE(?, '%Y-%m-%dT%H:%i:%s.%f+00:00'), ?, ?)"#,
+        values (?,?,?,?,?,STR_TO_DATE(?, '%Y-%m-%dT%H:%i:%s'), ?, ?)"#,
         quote.id,
         vehicle.license_plate,
         quote.monthly_cost,
         quote_params.email,
         quote_params.fuel_consumption,
-        timestamp,
+        datetime.get(0).unwrap(),
         quote_params.client_name,
         quote.labour_coverage
         )
