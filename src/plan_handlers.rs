@@ -86,6 +86,7 @@ async fn create_plan(
 
     let id = Uuid::new_v4().to_string();
     let timestamp = Utc::now().to_rfc3339();
+    let datetime: Vec<&str> = timestamp.split(".").collect();
 
     let plan = PlanData {
         id,
@@ -93,7 +94,7 @@ async fn create_plan(
         client_email: quote.client_email.as_ref().unwrap().clone(),
         vehicle: quote.license_plate.as_ref().unwrap().clone(),
         sign: sign.id.clone(),
-        creation_timestamp: timestamp,
+        creation_timestamp: datetime.get(0).unwrap(),
         active: false,
         reveniu_id,
         payment_link,
