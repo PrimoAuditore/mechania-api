@@ -104,7 +104,7 @@ async fn create_plan(
 
     let res = sqlx::query!(
         r#"insert into Plan(id,quote_id, client_email, vehicle, sign, creation_timestamp, active, reveniu_id, payment_link, payment_method)
-                           values (?,?,?,?,?,STR_TO_DATE(?, '%Y-%m-%dT%H:%i:%s.%f+00:00'),?,?,?,?)"#,
+                           values (?,?,?,?,?,STR_TO_DATE(?, '%Y-%m-%dT%H:%i:%s'),?,?,?,?)"#,
         plan.id,
         plan.quote_id,
         plan.client_email,
