@@ -64,7 +64,7 @@ jobs:
     env:
       ENV_DATABASE_URL: ${{ secrets.DATABASE_URL }}
       ENV_REVENIU_HOST: ${{ secrets.REVENIU_HOST }}
-      ENV_REVENIU_API_KEY: ${{ secrets.API_KEY }}
+      ENV_REVENIU_API_KEY: ${{ secrets.REVENIU_API_KEY }}
       APP_PR: ${{github.event.pull_request.number}}
       APP_NAMESPACE: ${{ vars.APP_NAMESPACE }}
       APP_IMAGE: ${{ vars.APP_IMAGE }}
