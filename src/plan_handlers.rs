@@ -2,6 +2,7 @@ use axum::{extract::Path, response::IntoResponse, Json};
 use chrono::Utc;
 use http::StatusCode;
 use num_traits::ToPrimitive;
+use std::env;
 use std::error::Error;
 use uuid::Uuid;
 
@@ -45,10 +46,12 @@ pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoRespons
         Some(plan) => (
             Some(plan.id.to_string()),
             Some(format!(
-                "https://sandbox.reveniu.com/checkout-custom-link/{}",
+                "{}/checkout-custom-link/{}",
+                env::var("REVENIU_HOST").unwrap(),
                 reveniu_plan.as_ref().unwrap().slug.clone()
             )),
         ),
+
         None => (None, None),
     };
     let plan_res = create_plan(
@@ -220,7 +223,10 @@ async fn create_reveniu_plan(quote: &QuoteData) -> Result<ReveniuResponse, Box<d
     let resp = reqwest::Client::new()
         .post("https://integration.reveniu.com/api/v1/plans/")
         .header("content-type", "application/json")
-        .header("reveniu-secret-key", std::env::var("REVENIU_API_KEY").unwrap())
+        .header(
+            "reveniu-secret-key",
+            std::env::var("REVENIU_API_KEY").unwrap(),
+        )
         .json(&body)
         .send()
         .await?;
