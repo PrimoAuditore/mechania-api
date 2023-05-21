@@ -227,9 +227,9 @@ async fn create_reveniu_plan(quote: &QuoteData) -> Result<ReveniuResponse, Box<d
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap();
-
+    //https://integration.reveniu.com
     let resp = client
-        .post("https://integration.reveniu.com/api/v1/plans/")
+        .post(std::env::var("REVENIU_API_HOST").unwrap() + "/api/v1/plans/")
         .header("content-type", "application/json")
         .header(
             "reveniu-secret-key",

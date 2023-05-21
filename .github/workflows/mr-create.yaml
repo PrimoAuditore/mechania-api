@@ -65,6 +65,7 @@ jobs:
           args: apply -f parsed_manifest.yaml
     env:
       ENV_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ENV_REVENIU_API_HOST: ${{ secrets.REVENIU_API_HOST }}
       ENV_REVENIU_HOST: ${{ secrets.REVENIU_HOST }}
       ENV_REVENIU_API_KEY: ${{ secrets.REVENIU_API_KEY }}
       ENV_RUST_LOG: ${{ vars.RUST_LOG }}
