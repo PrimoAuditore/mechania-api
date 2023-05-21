@@ -2,6 +2,7 @@ use axum::{extract::Path, response::IntoResponse, Json};
 use chrono::Utc;
 use http::StatusCode;
 use num_traits::ToPrimitive;
+use reqwest::ClientBuilder;
 use std::env;
 use std::error::Error;
 use uuid::Uuid;
@@ -221,7 +222,12 @@ async fn create_reveniu_plan(quote: &QuoteData) -> Result<ReveniuResponse, Box<d
         redirect_to_failure: "https://www.google.com".to_string(),
     };
 
-    let resp = reqwest::Client::new()
+    let client = ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .unwrap();
+
+    let resp = client
         .post("https://integration.reveniu.com/api/v1/plans/")
         .header("content-type", "application/json")
         .header(
