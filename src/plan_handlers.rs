@@ -172,13 +172,14 @@ async fn create_sign(reveniu_plan: &Option<ReveniuResponse>, sign_method: &SignM
 
     let sign_link = None;
     let sign_method_parsed = sign_method.value() as u32;
-    let creation_timestamp = Utc::now().to_rfc3339();
+    let timestamp = Utc::now().to_rfc3339();
+    let datetime: Vec<&str> = timestamp.split(".").collect();
 
     let sign = SignData {
         id,
         sign_link,
         sign_method: sign_method_parsed,
-        creation_timestamp,
+        creation_timestamp: datetime.get(0).unwrap().to_string(),
         verified: false,
     };
 
