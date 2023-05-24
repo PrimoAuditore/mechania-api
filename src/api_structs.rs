@@ -27,6 +27,15 @@ pub struct CreatePlanBody {
     pub sign_method: SignMethod,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct ManualVehicleCreation{
+    pub make: String,
+    pub model: String,
+    pub year: String,
+    pub license_plate: String,
+    pub vehicle_type: String,
+}
+
 // Responses
 #[derive(Debug, Serialize, Clone)]
 pub struct Vehicle {
