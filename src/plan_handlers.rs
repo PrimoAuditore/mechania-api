@@ -1,6 +1,10 @@
-use axum::{extract::Path, response::IntoResponse, Json};
+use axum::{
+    extract::{Host, Path},
+    response::IntoResponse,
+    Json,
+};
 use chrono::Utc;
-use http::StatusCode;
+use http::{StatusCode, Uri, uri::Scheme};
 use num_traits::ToPrimitive;
 use reqwest::ClientBuilder;
 use std::env;
@@ -15,7 +19,7 @@ use crate::{
 };
 
 #[axum_macros::debug_handler]
-pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoResponse {
+pub async fn create_plan_handler(host: Host, plan: Json<CreatePlanBody>) -> impl IntoResponse {
     // Get quote by quote id
     let quote: Option<QuoteData> = get_quote_by_id(&plan.quote_id).await;
 
@@ -25,16 +29,8 @@ pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoRespons
 
     let quote = quote.unwrap();
 
-    // Create reveniu plan
-    let reveniu_plan = match plan.payment_method {
-        PaymentMethod::CreditCard | PaymentMethod::DebitCard => {
-            Some(create_reveniu_plan(&quote).await.unwrap())
-        }
-        _ => None,
-    };
-
     // Create new sign
-    let sign = create_sign(&reveniu_plan, &plan.sign_method).await;
+    let sign = create_sign(&plan.sign_method).await;
 
     // TODO: Generate contract and send it to client
 
@@ -43,6 +39,19 @@ pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoRespons
     //let sign = sign.unwrap();
 
     // Create plan
+    let plan_res = create_plan(&quote, &sign, &plan.payment_method).await;
+
+    // Create reveniu plan
+    let client_host = format!("https://{}", host.0);
+    let reveniu_plan = match plan.payment_method {
+        PaymentMethod::CreditCard | PaymentMethod::DebitCard => Some(
+            create_reveniu_plan(&plan_res.id, &quote, client_host)
+                .await
+                .unwrap(),
+        ),
+        _ => None,
+    };
+
     let (reveniu_id, payment_link) = match &reveniu_plan {
         Some(plan) => (
             Some(plan.id.to_string()),
@@ -55,14 +64,10 @@ pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoRespons
 
         None => (None, None),
     };
-    let plan_res = create_plan(
-        &quote,
-        &sign,
-        reveniu_id,
-        payment_link.clone(),
-        &plan.payment_method,
-    )
-    .await;
+
+    if reveniu_id.is_some() && payment_link.is_some() {
+        set_plan_reveniu_fields(&plan_res.id, reveniu_id.unwrap(), payment_link.clone().unwrap()).await;
+    }
 
     //if plan_res.is_err() {}
 
@@ -76,11 +81,23 @@ pub async fn create_plan_handler(plan: Json<CreatePlanBody>) -> impl IntoRespons
     (StatusCode::CREATED, Json(plan))
 }
 
+pub async fn set_plan_reveniu_fields(plan_id: &str, reveniu_id: String, payment_link: String) {
+    let mut conn = establish_connection().await;
+
+    let res = sqlx::query!(
+        "UPDATE Plan SET reveniu_id=?, payment_link=? WHERE id=?",
+        reveniu_id,
+        payment_link,
+        plan_id
+    )
+    .execute(&mut conn)
+    .await
+    .unwrap();
+}
+
 async fn create_plan(
     quote: &QuoteData,
     sign: &SignData,
-    reveniu_id: Option<String>,
-    payment_link: Option<String>,
     payment_method: &PaymentMethod,
 ) -> PlanData {
     let mut conn = establish_connection().await;
@@ -97,8 +114,8 @@ async fn create_plan(
         sign: sign.id.clone(),
         creation_timestamp: datetime.get(0).unwrap().to_string(),
         active: false,
-        reveniu_id,
-        payment_link,
+        reveniu_id: None,
+        payment_link: None,
         payment_method: payment_method.value(),
     };
 
@@ -167,7 +184,7 @@ async fn get_plan_by_id(plan_id: &str) -> Option<Plan> {
     })
 }
 
-async fn create_sign(reveniu_plan: &Option<ReveniuResponse>, sign_method: &SignMethod) -> SignData {
+async fn create_sign(sign_method: &SignMethod) -> SignData {
     let id = Uuid::new_v4().to_string();
 
     let sign_link = None;
@@ -201,7 +218,11 @@ async fn create_sign(reveniu_plan: &Option<ReveniuResponse>, sign_method: &SignM
     sign
 }
 
-async fn create_reveniu_plan(quote: &QuoteData) -> Result<ReveniuResponse, Box<dyn Error>> {
+async fn create_reveniu_plan(
+    plan_id: &str,
+    quote: &QuoteData,
+    client_host: String,
+) -> Result<ReveniuResponse, Box<dyn Error>> {
     let price = quote.monthly_price.clone().unwrap().to_f32().unwrap();
     let client_name = quote.client_name.clone().unwrap();
 
@@ -219,8 +240,8 @@ async fn create_reveniu_plan(quote: &QuoteData) -> Result<ReveniuResponse, Box<d
         address_field: true,
         street_field: true,
         rsocial_field: true,
-        redirect_to: "https://k8s.pescarauto.cl/mechania".to_string(),
-        redirect_to_failure: "https://www.google.com".to_string(),
+        redirect_to: format!("{}/plan/{}/payment-successful", &client_host, plan_id),
+        redirect_to_failure: format!("{}/plan/{}/payment-failed", &client_host, plan_id),
     };
 
     let client = ClientBuilder::new()

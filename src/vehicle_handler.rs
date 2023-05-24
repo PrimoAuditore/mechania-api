@@ -1,17 +1,20 @@
 use crate::api_structs::Vehicle;
-use axum::Json;
+use axum::extract::{OriginalUri, Host};
+use axum::{Json, Extension};
 use axum::{extract::Query, response::IntoResponse};
 use http::StatusCode;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use regex::Regex;
 use std::error::Error;
+use std::net::SocketAddr;
 
 use crate::helper_structs::VehicleDescription;
 use crate::{api_structs::GetVehicleQP, sql::establish_connection};
 
 #[axum_macros::debug_handler]
-pub async fn get_vehicle_data(query_params: Query<GetVehicleQP>) -> impl IntoResponse {
+pub async fn get_vehicle_data(query_params: Query<GetVehicleQP>, uri: Host) -> impl IntoResponse {
+    println!("extension:{:?}", uri);
     // Check if received license plate is in a valid format.
     let rg = Regex::new(r"^[A-Z]{2}[A-Z0-9]{2}\d{2}(\d{2})?$").unwrap();
     let valid = rg.is_match(&query_params.license_plate);
