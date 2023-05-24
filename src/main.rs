@@ -11,7 +11,7 @@ use plan_handlers::{create_plan_handler, get_plan_by_id_handler};
 use quote_handlers::{create_quote, get_quote};
 use sentry::integrations::panic::PanicIntegration;
 use tower_http::cors::CorsLayer;
-use vehicle_handler::get_vehicle_data;
+use vehicle_handler::{get_vehicle_data, get_vehicle_types, vehicle_manual_creation};
 
 use axum::{
     http::{HeaderValue, Method},
@@ -47,6 +47,20 @@ async fn main() {
                 .allow_methods([Method::GET, Method::POST]),
         )
         .route("/vehicle", get(get_vehicle_data))
+        .layer(
+            CorsLayer::new()
+                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+                .allow_headers([http::header::CONTENT_TYPE])
+                .allow_methods([Method::GET, Method::POST]),
+        )
+        .route("/vehicle-type", get(get_vehicle_types))
+        .layer(
+            CorsLayer::new()
+                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+                .allow_headers([http::header::CONTENT_TYPE])
+                .allow_methods([Method::GET, Method::POST]),
+        )
+        .route("/vehicle/manual", post(vehicle_manual_creation))
         .layer(
             CorsLayer::new()
                 .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())

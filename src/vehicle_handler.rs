@@ -1,16 +1,65 @@
-use crate::api_structs::Vehicle;
-use axum::extract::{OriginalUri, Host};
-use axum::{Json, Extension};
+use crate::api_structs::{ManualVehicleCreation, Vehicle};
+use axum::extract::Host;
+use axum::Json;
 use axum::{extract::Query, response::IntoResponse};
 use http::StatusCode;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use regex::Regex;
 use std::error::Error;
-use std::net::SocketAddr;
 
 use crate::helper_structs::VehicleDescription;
 use crate::{api_structs::GetVehicleQP, sql::establish_connection};
+
+#[axum_macros::debug_handler]
+pub async fn vehicle_manual_creation(
+    vehicle_data: Json<ManualVehicleCreation>,
+) -> impl IntoResponse {
+    sentry::capture_message("New manual registration", sentry::Level::Error);
+
+    let vehicle = Vehicle {
+        license_plate: vehicle_data.license_plate.clone(),
+        vehicle_type: Some(vehicle_data.vehicle_type.clone()),
+        make: Some(vehicle_data.make.clone()),
+        model: Some(vehicle_data.model.clone()),
+        year: Some(vehicle_data.year.clone()),
+        vin: None,
+        circulation_to: None,
+        circulation_from: None,
+        description: None,
+        engine_code: None,
+        fuel: None,
+    };
+
+    let new_vehicle = create_new_vehicle(vehicle).await;
+
+    if new_vehicle.is_err() {
+        sentry::capture_message(
+            &format!(
+                "Failed to store new manual vehicle with license plate: {} : {}",
+                &vehicle_data.license_plate,
+                new_vehicle.as_ref().unwrap_err()
+            ),
+            sentry::Level::Fatal,
+        );
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(format!(
+                "Failed to store new manual vehicle with license_plate: {}",
+                &vehicle_data.license_plate
+            )),
+        )
+            .into_response();
+    };
+
+    (StatusCode::CREATED, Json(new_vehicle.unwrap())).into_response()
+}
+
+pub async fn get_vehicle_types() -> impl IntoResponse {
+    let list = get_list_vehicle_types().await;
+
+    (StatusCode::OK, Json(list)).into_response()
+}
 
 #[axum_macros::debug_handler]
 pub async fn get_vehicle_data(query_params: Query<GetVehicleQP>, uri: Host) -> impl IntoResponse {
@@ -83,48 +132,22 @@ pub async fn get_vehicle_data_api(
 
     println!("resp: {:?}", resp);
 
+    if !resp.status().is_success() {
+        let code = resp.status();
+        let text = resp.text().await.unwrap();
+        let err_msg = format!(
+            "RegCheck API failed for license plate {}: {} - {}",
+            &license_plate, code, text
+        );
+
+        sentry::capture_message(&err_msg, sentry::Level::Fatal);
+
+        return Err((StatusCode::FAILED_DEPENDENCY, err_msg));
+    }
+
     // reqwest to api that returns xml.
 
     let xml: String = resp.text().await.unwrap();
-    //let xml = r#"
-    //            <?xml version="1.0" encoding="utf-8"?>
-    //    <Vehicle xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://regcheck.org.uk">
-    //      <vehicleJson>{
-    //      "Description": "TOYOTA RAV4 4X4",
-    //      "RegistrationYear": "2011",
-    //      "CarMake": {
-    //        "CurrentTextValue": "TOYOTA"
-    //      },
-    //      "CarModel": {
-    //        "CurrentTextValue": "RAV4 4X4"
-    //      },
-    //      "MakeDescription": {
-    //        "CurrentTextValue": "TOYOTA"
-    //      },
-    //      "ModelDescription": {
-    //        "CurrentTextValue": "RAV4 4X4"
-    //      },
-    //      "ImageUrl": "http://cl.matriculaapi.com/image.aspx/@VE9ZT1RBIFJBVjQgNFg0",
-    //      "ValidSince": "30-07-2022",
-    //      "Expiry": "30-04-2023",
-    //      "VehicleType": "STATION WAGON",
-    //      "VIN": "JTMBD33V3B5268861",
-    //      "EngineCode": "2AZB488919",
-    //      "Fuel": "GASOLINA"
-    //    }</vehicleJson>
-    //      <vehicleData>
-    //        <Description>TOYOTA RAV4 4X4</Description>
-    //        <RegistrationYear>2011</RegistrationYear>
-    //        <CarMake>
-    //          <CurrentTextValue>TOYOTA</CurrentTextValue>
-    //        </CarMake>
-    //        <CarModel>RAV4 4X4</CarModel>
-    //        <FuelType>
-    //          <CurrentValue>GASOLINA</CurrentValue>
-    //        </FuelType>
-    //      </vehicleData>
-    //    </Vehicle>
-    //            "#;
     let mut reader = Reader::from_str(&xml);
     println!("{}", xml);
 
@@ -146,7 +169,7 @@ pub async fn get_vehicle_data_api(
 
     //return Err("No vehicle data found".into());
     sentry::capture_message("XML for vehicle data invalid", sentry::Level::Error);
-    return Err((StatusCode::INTERNAL_SERVER_ERROR, String::from("test")));
+    return Err((StatusCode::INTERNAL_SERVER_ERROR, String::from("Invalid response from RegCheck")));
 }
 
 pub async fn check_vehicle_exists(license_plate: String) -> Option<Vehicle> {
@@ -184,4 +207,19 @@ pub async fn create_new_vehicle(vehicle: Vehicle) -> Result<Vehicle, Box<dyn Err
     .await?;
 
     Ok(vehicle)
+}
+
+pub async fn get_list_vehicle_types() -> Vec<String> {
+    pub struct TempList {
+        pub vehicle_type: Option<String>,
+    }
+
+    let mut conn = establish_connection().await;
+
+    let res = sqlx::query_as!(TempList, "SELECT DISTINCT vehicle_type from Vehicle")
+        .fetch_all(&mut conn)
+        .await
+        .unwrap();
+
+    res.into_iter().map(|v| v.vehicle_type).flatten().collect()
 }
