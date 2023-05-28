@@ -72,14 +72,10 @@ fn calculate_price(create_params: &CreateQuoteBody, vehicle: &Vehicle) -> Quote 
     // Fuel consumption delta
     price += create_params.fuel_consumption * 0.3;
 
-    // IVA
-    price *= 1.19;
-
-    // Round price
-    price = price.ceil();
-
     // Labour coverage
     let coverage = price * 15.0;
+    // IVA
+    price *= 1.19;
 
     // Generate quote uuid
     let id = Uuid::new_v4();
@@ -99,7 +95,6 @@ pub async fn create_new_quote(
     let timestamp = Utc::now().to_rfc3339();
     let datetime: Vec<&str> = timestamp.split(".").collect();
     println!("{}", datetime.get(0).unwrap());
-
 
     let res = sqlx::query!(
         r#"insert into Quote(id,license_plate, monthly_price, client_email, fuel_consumption, creation_timestamp, client_name, labour_coverage)

@@ -94,7 +94,7 @@ pub async fn get_vehicle_data(query_params: Query<GetVehicleQP>, uri: Host) -> i
                 "Couldn't retrieve data for license plate {}",
                 query_params.license_plate.clone()
             );
-            return (StatusCode::INTERNAL_SERVER_ERROR, err_msg).into_response();
+            return vehicle_data.unwrap_err().into_response();
         }
 
         // Get vehicle object form api data
