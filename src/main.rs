@@ -23,7 +23,7 @@ async fn main() {
     let _guard = sentry::init((
         "https://7f2f98fe51504514a5ad0eceba3c9d03@o1166558.ingest.sentry.io/4505213614161920",
         sentry::ClientOptions {
-            environment: Some(std::env::var("SENTRY_ENVIRONMENT")),
+            environment: Some(std::env::var("SENTRY_ENVIRONMENT").unwrap().into()),
             release: sentry::release_name!(),
             ..Default::default()
         }
