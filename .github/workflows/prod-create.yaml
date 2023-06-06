@@ -69,6 +69,7 @@ jobs:
       ENV_REVENIU_HOST: ${{ secrets.REVENIU_HOST }}
       ENV_REVENIU_API_KEY: ${{ secrets.REVENIU_API_KEY }}
       ENV_RUST_LOG: ${{ vars.RUST_LOG }}
+      ENV_SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT}}
       APP_TAG: ${{ github.ref_name }}
       APP_NAMESPACE: ${{ vars.APP_NAMESPACE }}
       APP_IMAGE: ${{ vars.APP_IMAGE }}
